@@ -1,0 +1,38 @@
+# IDE related files
+.idea/
+.vscode/
+.zed/
+__pycache__/
+
+# Virtual environment
+env/
+venv/
+.venv/
+.env
+
+# Other generated files
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+*.prof
+*.log
+
+# Databases
+*.db
+db.sqlite3
+
+# macOS
+.DS_Store
+
+# Docker
+docker-compose.*.yml
+
+# Dist files
+dist/
+build/
+
+# Test reports
+test-reports/
+/node_modules/
+/.serverless/
