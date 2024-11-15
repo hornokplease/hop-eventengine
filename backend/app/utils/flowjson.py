@@ -1,18 +1,4 @@
-from pydantic import BaseModel
-from fastapi import FastAPI
-
-app = FastAPI()
-
-class EventDetails(BaseModel):
-    event_name : str 
-    start_date : str
-    end_date : str
-    individual_cost: int
-    max_cost: int
-    max_attendees: int
-
-class FrontendInput(BaseModel):
-    events : list[EventDetails]
+from app.utils.pydantics import FrontendInput
 
 def payloadbuilder(event_names):
     payload = {}
@@ -149,11 +135,3 @@ def process_event_names(front_end_input: FrontendInput):
     event_names = [event.event_name for event in front_end_input.events]
     return event_names
 
-@app.post("/dashboard/forms")
-async def form_creator(front_end_input: FrontendInput):
-    event_names = process_event_names(front_end_input)
-    events = event(front_end_input)
-    # create eventsDB here
-    flowjson_for_personalinfo = personalinfo_jsonbuilder()
-    flowjson_for_events = event_details_screen_builder(event_names)
-    return flowjson_for_personalinfo
