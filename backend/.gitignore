@@ -36,3 +36,6 @@ build/
 test-reports/
 /node_modules/
 /.serverless/
+
+# Deprecated
+app/deprecated/

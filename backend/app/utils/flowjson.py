@@ -1,6 +1,10 @@
-from app.utils.pydantics import FrontendInput
+from app.utils.pydantics import AdditionalInfoPydantic
 
-def payloadbuilder(event_names):
+ADDITIONALINFO_PAYLOAD_DB = {}
+ADDITIONALINFO_DATALOAD_DB = {}
+
+# events form - flowjson builder
+def events_payloadbuilder(event_names):
     payload = {}
     for event_name in event_names:
         event_id = event_name.replace(" ", "_")
@@ -9,7 +13,7 @@ def payloadbuilder(event_names):
         payload.update({f"{event_id}" : f"${event_name_variable}"})
     return payload
 
-def mcqbuilder(event_names):
+def events_mcqbuilder(event_names):
     mcq_element = [
         {
             "type": "TextSubheading",
@@ -33,14 +37,14 @@ def mcqbuilder(event_names):
             "label": "Submit",
             "on-click-action":{
                 "name": "complete",
-                "payload": payloadbuilder(event_names)
+                "payload": events_payloadbuilder(event_names)
             },
         }
     ]
     return mcq_element
 
-def event_details_screen_builder(event_names):
-    children_of_screen = mcqbuilder(event_names)
+def events_screenbuilder(event_names):
+    children_of_screen = events_mcqbuilder(event_names)
     flow_json = {
         "version": "5.0",
         "screens": [
@@ -64,16 +68,8 @@ def event_details_screen_builder(event_names):
     }
     return flow_json
 
-def event(front_end_input: FrontendInput):
-    events = [{
-        "event_name": event.event_name,
-        "event_id": event.event_name.replace(" ", "_"),
-        "max_attendees": event.max_attendees
-    } for event in front_end_input.events
-    ]
-    return events
-
-def personalinfo_jsonbuilder():
+# personal info form - flowjson builder
+def personalinfo_screenbuilder():
     flowjson = {
         "version": "5.1",
         "screens": [
@@ -131,7 +127,101 @@ def personalinfo_jsonbuilder():
       }
     return flowjson
 
-def process_event_names(front_end_input: FrontendInput):
-    event_names = [event.event_name for event in front_end_input.events]
-    return event_names
+# additional info form - flowjson builder
+def additionalinfo_payload(screen_id, size):
+    screen_codes = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t"]
+    screen_code_plus_one = screen_codes[screen_id + 1]
+    if screen_id != (size-1):
+        onclickaction = {
+            "name": "navigate",
+            "next": {
+                "type": "screen",
+                "name": f"screen_{screen_code_plus_one}"
+            }
+        }
+    else:
+        onclickaction = {
+            "name": "complete"
+        }
+    labelform = "${form." + f"dropdown_{screen_id}" + "}"
+    payload = {
+        f"dropdown_{screen_id}": labelform
+    }
+    payload.update(ADDITIONALINFO_PAYLOAD_DB)
+    onclickaction.update({"payload": payload})
+    labeldata = "${data." + f"dropdown_{screen_id}" + "}"
+    ADDITIONALINFO_PAYLOAD_DB.update({f"dropdown_{screen_id}": labeldata})
+    dataload = {
+        f"dropdown_{screen_id}" : {
+            "type": "string",
+            "__example__": "Example"
+        }
+    }
+    ADDITIONALINFO_DATALOAD_DB.update(dataload)
+    return onclickaction
 
+def additionalinfo_children(event_name, max_attendees, screen_id, size):
+    upd_max_attendees = max_attendees 
+    if screen_id != (size - 1):
+        label = "Continue"
+    else:
+        label = "Submit"
+    children = [
+        {
+            "type": "TextSubheading",
+            "text": f"{event_name}"
+        },
+        {
+            "type": "Dropdown",
+            "label": "Number of Attendees",
+            "required": True,
+            "name": f"dropdown_{screen_id}",
+            "data-source": [
+                {
+                    "id": f"{screen_id}_{attendee+1}",
+                    "title": f"{attendee+1}"
+                }
+                for attendee in range(upd_max_attendees)
+            ]
+        },
+        {
+            "type": "Footer",
+            "label": f"{label}",
+            "on-click-action": additionalinfo_payload(screen_id, size)
+        }
+    ]
+    return children
+
+def additionalinfo_screenbuilder(event_name, max_attendees, screen_id, size):
+    screen_codes = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t"]
+    screen_code = screen_codes[screen_id]
+    screen = {
+        "id": f"screen_{screen_code}",
+        "title": f"Event {screen_id + 1}"
+    }
+    data = {}
+    if screen_id != 0:
+        data.update(ADDITIONALINFO_DATALOAD_DB)
+    layout = {
+        "type": "SingleColumnLayout",
+        "children": [{
+            "type": "Form",
+            "name": "flow_path",
+            "children": additionalinfo_children(event_name, max_attendees, screen_id, size)
+        }]
+    }  
+    screen.update({"data": data})
+    if screen_id == size-1:   
+        screen.update({"terminal": True})
+    screen.update({"layout": layout})
+    return screen
+
+def additionalinfo_jsonbuilder(additionalinfo: AdditionalInfoPydantic):
+    flowjson = {
+        "version": "5.1",
+        "screens": [
+            additionalinfo_screenbuilder(infoforevent.event_name, infoforevent.max_attendees, index, len(additionalinfo.events))
+            for index, infoforevent in enumerate(additionalinfo.events)
+        ]
+    }
+    return flowjson
